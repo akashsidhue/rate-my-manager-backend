@@ -24,4 +24,13 @@ public class Otp {
 
 	@Column(nullable = false)
 	private LocalDateTime createdAt = LocalDateTime.now();
+	
+	@Column(nullable = true) // Keep nullable to avoid DDL errors during migration
+	private LocalDateTime expiresAt;
+	
+	@Column(nullable = true) // Keep nullable to avoid DDL errors during migration
+	private Integer resendCount = 0;
+	
+	@Column(nullable = true) // Keep nullable to avoid DDL errors during migration
+	private Integer verificationAttempts = 0;
 } 

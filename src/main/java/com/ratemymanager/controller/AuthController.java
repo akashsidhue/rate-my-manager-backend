@@ -11,14 +11,18 @@ import com.ratemymanager.repository.UserRepository;
 import com.ratemymanager.repository.OtpRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @Slf4j
@@ -55,11 +59,38 @@ public class AuthController {
 			resp.put("message", "OTP sent if the email is allowed");
 			log.info("OTP request processed successfully for email: {}", email);
 			return ResponseEntity.ok(resp);
+		} catch (ResponseStatusException e) {
+			log.warn("Rate limit exceeded for email: {}, status: {}", email, e.getStatusCode());
+			Map<String, Object> errorResp = new HashMap<>();
+			errorResp.put("error", e.getReason());
+			return ResponseEntity.status(e.getStatusCode()).body(errorResp);
 		} catch (Exception e) {
 			log.error("Failed to process OTP request for email: {}, error: {}", email, e.getMessage(), e);
 			Map<String, Object> errorResp = new HashMap<>();
 			errorResp.put("error", "Failed to send OTP: " + e.getMessage());
 			return ResponseEntity.status(500).body(errorResp);
+		}
+	}
+
+	@PostMapping("/resend-otp")
+	public ResponseEntity<?> resendOtp(@RequestHeader("email") String email) {
+		log.info("OTP resend request received for email: {}", email);
+		try {
+			authService.resendOtp(email);
+			Map<String, Object> resp = new HashMap<>();
+			resp.put("message", "OTP resent successfully");
+			log.info("OTP resend processed successfully for email: {}", email);
+			return ResponseEntity.ok(resp);
+		} catch (ResponseStatusException e) {
+			log.warn("Rate limit exceeded for resend email: {}, status: {}", email, e.getStatusCode());
+			Map<String, Object> errorResp = new HashMap<>();
+			errorResp.put("error", e.getReason());
+			return ResponseEntity.status(e.getStatusCode()).body(errorResp);
+		} catch (Exception e) {
+			log.error("Failed to process OTP resend for email: {}, error: {}", email, e.getMessage(), e);
+			Map<String, Object> errorResp = new HashMap<>();
+			errorResp.put("error", "Failed to resend OTP: " + e.getMessage());
+			return ResponseEntity.status(400).body(errorResp);
 		}
 	}
 
@@ -75,6 +106,11 @@ public class AuthController {
 			resp.put("token", token);
 			log.info("OTP verification successful for email: {}", email);
 			return ResponseEntity.ok(resp);
+		} catch (ResponseStatusException e) {
+			log.warn("Rate limit exceeded for verification email: {}, status: {}", email, e.getStatusCode());
+			Map<String, Object> errorResp = new HashMap<>();
+			errorResp.put("error", e.getReason());
+			return ResponseEntity.status(e.getStatusCode()).body(errorResp);
 		} catch (Exception e) {
 			log.error("OTP verification failed for email: {}, error: {}", email, e.getMessage(), e);
 			Map<String, Object> errorResp = new HashMap<>();
@@ -228,6 +264,51 @@ public class AuthController {
 			log.error("Failed to add test data, error: {}", e.getMessage(), e);
 			Map<String, Object> errorResp = new HashMap<>();
 			errorResp.put("error", "Failed to add test data: " + e.getMessage());
+			return ResponseEntity.status(500).body(errorResp);
+		}
+	}
+
+	@GetMapping("/debug-otp-status")
+	public ResponseEntity<?> debugOtpStatus(@RequestParam String email) {
+		log.info("Debug OTP status request for email: {}", email);
+		try {
+			Map<String, Object> response = new HashMap<>();
+			
+			// Get the latest OTP
+			Optional<Otp> latestOtp = otpRepository.findTopByEmailOrderByCreatedAtDesc(email.toLowerCase());
+			if (latestOtp.isPresent()) {
+				Otp otp = latestOtp.get();
+				LocalDateTime now = LocalDateTime.now();
+				LocalDateTime windowStart = now.minusMinutes(5); // 5 minutes
+				
+				response.put("latestOtp", Map.of(
+					"id", otp.getId(),
+					"email", otp.getEmail(),
+					"otpCode", otp.getOtpCode(),
+					"createdAt", otp.getCreatedAt(),
+					"expiresAt", otp.getExpiresAt(),
+					"resendCount", otp.getResendCount(),
+					"verificationAttempts", otp.getVerificationAttempts(),
+					"isWithinWindow", otp.getCreatedAt().isAfter(windowStart),
+					"windowStart", windowStart,
+					"currentTime", now
+				));
+			} else {
+				response.put("latestOtp", null);
+			}
+			
+			// Count OTPs in last 5 minutes
+			LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+			Long recentCount = otpRepository.countByEmailAndCreatedAtAfter(email.toLowerCase(), fiveMinutesAgo);
+			response.put("otpsInLast5Minutes", recentCount);
+			response.put("fiveMinutesAgo", fiveMinutesAgo);
+			response.put("currentTime", LocalDateTime.now());
+			
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			log.error("Error getting OTP debug status for email: {}, error: {}", email, e.getMessage(), e);
+			Map<String, Object> errorResp = new HashMap<>();
+			errorResp.put("error", "Failed to get OTP status: " + e.getMessage());
 			return ResponseEntity.status(500).body(errorResp);
 		}
 	}

@@ -20,7 +20,7 @@ public class SecurityConfig {
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/managers/**", "/api/reviews/**").permitAll()
-				.requestMatchers("/auth/request-otp", "/auth/verify-otp", "/auth/test-email", "/auth/test-data", "/auth/add-test-data").permitAll()
+				.requestMatchers("/auth/request-otp", "/auth/resend-otp", "/auth/verify-otp", "/auth/test-email", "/auth/test-data", "/auth/add-test-data", "/auth/debug-otp-status").permitAll()
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

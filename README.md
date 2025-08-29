@@ -4,7 +4,7 @@ Spring Boot (Java) REST API for the Rate My Manager MVP.
 
 ## Endpoints
 
-- `POST /api/managers` – Add manager (JSON: `{ "name": "...", "company": "...", "role": "..." }`)
+- `POST /api/managers` – Add manager (JSON: `{ "name": "...", "company": "...", "post": "...", "role": "..." }`)
 - `GET /api/managers?q=keyword` – Search managers by name/company
 - `GET /api/managers/{id}` – Get manager + average rating + reviews
 - `POST /api/reviews` – Add review (JSON: `{ "manager": { "id": 1 }, "rating": 5, "reviewText": "..." }`)

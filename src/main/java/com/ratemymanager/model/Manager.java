@@ -19,4 +19,7 @@ public class Manager {
     private String company;
 
     private String role;
+
+    @Column(nullable = false)
+    private String position;
 }

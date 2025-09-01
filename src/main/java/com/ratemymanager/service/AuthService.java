@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Key;
@@ -41,6 +42,7 @@ public class AuthService {
 		this.otpConfig = otpConfig;
 	}
 
+	@Transactional
 	public void requestOtp(String email) {
 		log.info("Processing OTP request for email: {}", email);
 		validateCompanyEmail(email);
@@ -128,6 +130,7 @@ public class AuthService {
 		log.info("OTP email sent successfully to: {}", email);
 	}
 
+	@Transactional
 	public String verifyOtpAndGenerateToken(String email, String otp) {
 		log.info("Verifying OTP for email: {}", email);
 		validateCompanyEmail(email);
@@ -179,6 +182,7 @@ public class AuthService {
 		return token;
 	}
 	
+	@Transactional
 	public void resendOtp(String email) {
 		log.info("Processing OTP resend request for email: {}", email);
 		validateCompanyEmail(email);
@@ -225,6 +229,7 @@ public class AuthService {
 		log.info("OTP resend email sent successfully to: {}", email);
 	}
 	
+	@Transactional
 	private void incrementVerificationAttempts(String email) {
 		Optional<Otp> latestOtp = otpRepository.findTopByEmailOrderByCreatedAtDesc(email);
 		if (latestOtp.isPresent()) {
